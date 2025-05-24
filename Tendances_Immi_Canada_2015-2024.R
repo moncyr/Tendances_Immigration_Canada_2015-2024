@@ -14,6 +14,7 @@ tail(immigration[,2], 20) # les 20 dernieres lignes
 colnames(immigration)[1]<-"Categories d'Immigration"
 # nombre de colonnes
 ncol(immigration)
+
 # les valeurs de la premiere colonne
 unique(immigration[,1])
 #nom de la premiere colonne
@@ -62,7 +63,7 @@ trimestre<-function(Q,x){
 # index pour conserver les colonnes des totaux
   
   index_total<-grep('total',colnames(immigration),ignore.case = TRUE)
-  
+  names(immigration[,index_total])
   
 # donnees de l'immigration du nunavut
 immigration_Nunavut<-province('nunavut')
@@ -112,7 +113,16 @@ plot(0,0, main="Nombre d'immigrant par trimestre",
             max(immigration_trimestre[1,])), type='n', xaxt='n' )
 
 #type='n' pour ne rien afficher, type='b' ligne et point, type='h' lignse horizontales
-axis(side=1, at=c(1:ncol(immigration_trimestre)),labels =names(immigration_trimestre), las=2  )
+# l'axe des x:
+Q<-c(rep(c('Q1','Q2','Q3','Q4'),9),'Q1','Q2')
+annees_x<-c(rep('2015',4),rep('2016',4),rep('2017',4),
+            rep('2018',4),rep('2019',4),rep('2020',4),
+            rep('2021',4),rep('2022',4),rep('2023',4),
+            rep('2024',2))
+x_labels<-paste(annees_x,Q, sep='.')
+x_labels
+
+axis(side=1, at=c(1:ncol(immigration_trimestre)),labels =x_labels, las=2  )
 
 points(x=1:ncol(immigration_trimestre),
        y=immigration_trimestre[1,], type = 'b', lwd=2 ) 
@@ -250,16 +260,24 @@ for(i in c(1:ncol(immigration_annees))){
   }
 valeur
 ##########
+#combinaison de donne demographiques 
+canada_demo_annees<-data.frame(canada_annees,
+                               demographie=demographie_annees)
+str(canada_demo_annees)
 
-# modele de regression
-Regression<-lm(Nombre~Annees,data=canada_annees)
+# modele de regression multiple
+Regression<-lm(Nombre~Annees,data=canada_demo_annees)
 summary(Regression)
-# avec les valeurs extremes
+
 # le nuage de points
+
+# Tracer la Regression Nombre en fonction des annees
 plot(canada_annees$Nombre~canada_annees$Annees,col='red',cex=1,
      xlab='Annees', ylab='Nombre', main="Modele de regression",
      xlim=c(2016, 2024), 
      ylim=c(min(canada_annees$Nombre)-20000,max(canada_annees$Nombre)+20000))
+
+
     
 # les coefficient de la droite de regression
 Regression
@@ -272,11 +290,33 @@ segments(x0 = canada_annees$Annees,
          y1= fitted(Regression),
          col='blue', lwd=1.5)  
 
+# Regression en fonction de la demographie
+Regression<-lm(Nombre~demographie,data=canada_demo_annees)
+summary(Regression)
 
-# sans valeur extreme
-# on supprime les lignes qui correspondent aux annees 2020 et 2024
-canada_annees <-canada_annees[-c(6,10),]
-canada_annees
+# le nuage de points
+
+# Tracer la Regression Nombre en fonction des annees
+plot(canada_demo_annees$Nombre~canada_demo_annees$demographie,col='red',cex=1,
+     xlab='Annees', ylab='Nombre', main="Modele de regression",
+     xlim=c(min(canada_demo_annees$demographie),max(canada_demo_annees$demographie)), 
+     ylim=c(min(canada_annees$Nombre),max(canada_annees$Nombre)))
+
+
+
+# les coefficient de la droite de regression
+Regression
+# Tracer de la droite de regression
+abline(Regression, lwd=1.5)
+# tracer des ecarts entre les valeur predites et les valeurs observees
+segments(x0 = canada_demo_annees$demographie,
+         y0= canada_demo_annees$Nombre,
+         x1= canada_demo_annees$demographie,
+         y1= fitted(Regression),
+         col='blue', lwd=1.5)  
+
+
+
 
 # verification des supposition
 # verification de la normalite des residus
@@ -295,4 +335,42 @@ y=-50934239 + 25404*2024
 y
 y=-50934239 + 25404*2020
 y
+
+# Traitement des donnees de demographie entre 2015 et 2024
+demographie<-read.csv2('Demographie_Canada.csv', sep=';', header = TRUE)
+head(demographie)
+demographie$Géographie
+names(demographie)
+str(demographie)
+
+# remplacer les espaces ' ' dans les valeurs numeriques 
+demographie<-data.frame(lapply(demographie, function(x) gsub(' ','',x)))
+# convertir les valeur en type numerique 
+demographie<-data.frame(demographie[,1],lapply(demographie[,c(2:length(demographie))], as.numeric))
+
+
+# ajouton les colonnes sommes des annees
+somme_annee<-function(data){
+annees<-2014:2024
+  # Initialiser un data.frame vide avec les mêmes lignes que data
+  demographie_annees <- data.frame(matrix(nrow = nrow(data), ncol = 0))
+
+    for ( annee in annees) {
+      # on determine les trimestres pour chaque annees
+      trim<-grep(annee,names(demographie),ignore.case = TRUE)
+      # on additionne pour avoir la somme pour l'annee
+      if (length(trim) == 4) {
+        # Calculer la somme des 4 trimestres
+        demographie_annees[[as.character(annee)]] <- rowSums(data[, trim], na.rm = TRUE)
+      }
+      # la somme de toutes les provinces   
+    demographie_somme<-colSums(demographie_annees)
+    
+  }
+
+  return(demographie_somme)
+}
+demographie_somme<-somme_annee(demographie)
+demographie_somme
+str(demographie_annees)
 
