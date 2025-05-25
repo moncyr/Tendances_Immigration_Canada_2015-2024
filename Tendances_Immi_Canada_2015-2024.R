@@ -260,12 +260,12 @@ for(i in c(1:ncol(immigration_annees))){
   }
 valeur
 ##########
-#combinaison de donne demographiques 
+#combinaison avec les donnes demographiques 
 canada_demo_annees<-data.frame(canada_annees,
                                demographie=demographie_annees)
-str(canada_demo_annees)
+head(canada_demo_annees)
 
-# modele de regression multiple
+# modele de regression simple
 Regression<-lm(Nombre~Annees,data=canada_demo_annees)
 summary(Regression)
 
@@ -316,8 +316,6 @@ segments(x0 = canada_demo_annees$demographie,
          col='blue', lwd=1.5)  
 
 
-
-
 # verification des supposition
 # verification de la normalite des residus
 qqnorm(residuals(Regression), main='Quartiles-Quartiles',
@@ -330,11 +328,9 @@ plot(fitted(Regression),residuals(Regression), main='Residus en fonction des val
      xlab='Residus',
      ylab='Valeurs Predites')
 
-#valeur predite pour 2024 et 2020
-y=-50934239 + 25404*2024
-y
-y=-50934239 + 25404*2020
-y
+# modele de regression multiple
+Regression<-lm(Nombre~Annees+demographie,data=canada_demo_annees)
+summary(Regression)
 
 # Traitement des donnees de demographie entre 2015 et 2024
 demographie<-read.csv2('Demographie_Canada.csv', sep=';', header = TRUE)
@@ -348,8 +344,7 @@ demographie<-data.frame(lapply(demographie, function(x) gsub(' ','',x)))
 # convertir les valeur en type numerique 
 demographie<-data.frame(demographie[,1],lapply(demographie[,c(2:length(demographie))], as.numeric))
 
-
-# ajouton les colonnes sommes des annees
+# creer un dataframe qui regroupe les donnees par annees
 somme_annee<-function(data){
 annees<-2014:2024
   # Initialiser un data.frame vide avec les mêmes lignes que data
@@ -370,7 +365,42 @@ annees<-2014:2024
 
   return(demographie_somme)
 }
+# on apllique la fonction au dataframe demographie 
 demographie_somme<-somme_annee(demographie)
-demographie_somme
+head(demographie_somme)
+
 str(demographie_annees)
 
+# donnee de la population active
+# source : https://www.kaggle.com/datasets/pienik/unemployment-in-canada-by-province-1976-present
+population_active<-read.csv('Unemployment_Canada_1976_present.csv',sep=',',header = TRUE)
+str(population_active)
+head(population_active)
+
+population_active$REF_DATE<-as.factor(population_active$REF_DATE)
+population_active$Employment<-as.numeric(population_active$Employment)
+
+# colonne annees
+years <- substr(as.character(population_active$REF_DATE), 1, 4)
+years
+
+# ajout de la colonne annees
+population_active$Annes<-years
+
+# coversion en type facteur
+population_active$Annes<-as.factor(population_active$Annes)
+# population active moyenne par annees  
+employment<-tapply(population_active$Employment,INDEX=population_active$Annes,FUN =mean)
+# population active de 2015 a 2024
+employment_canada<-employment[names(employment)>='2015' & names(employment)<='2024']
+employment_canada
+
+# Regression multiple
+# on coupe les donnees jusqu'a 2023
+canada_demo_annees_2023<-canada_demo_annees[1:
+                                            nrow(canada_demo_annees)-1,]
+canada_demo_annees_emp<-data.frame(canada_demo_annees_2023,employabilite=employment_canada)
+
+# Regression multiple 
+Regression_Emp<-lm(Nombre~Annees+demographie+employabilite,data=canada_demo_annees_emp)
+summary(Regression_Emp)
