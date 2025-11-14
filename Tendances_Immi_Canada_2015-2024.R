@@ -376,15 +376,15 @@ str(demographie_annees)
 population_active<-read.csv('Unemployment_Canada_1976_present.csv',sep=',',header = TRUE)
 str(population_active)
 head(population_active)
-
+# conversion des types 
 population_active$REF_DATE<-as.factor(population_active$REF_DATE)
 population_active$Employment<-as.numeric(population_active$Employment)
 
-# colonne annees
+# creation de la colonne years pour faciliter le filtrage
 years <- substr(as.character(population_active$REF_DATE), 1, 4)
 years
 
-# ajout de la colonne annees
+# ajout de la colonne Annees dans le dataframe population_active
 population_active$Annes<-years
 
 # coversion en type facteur
@@ -397,10 +397,10 @@ employment_canada
 
 # Regression multiple
 # on coupe les donnees jusqu'a 2023
-canada_demo_annees_2023<-canada_demo_annees[1:
-                                            nrow(canada_demo_annees)-1,]
+canada_demo_annees_2023<-canada_demo_annees[1:nrow(canada_demo_annees)-1,]
+# on ajoute les donnees employment au dataframe canada_demo_annees 
 canada_demo_annees_emp<-data.frame(canada_demo_annees_2023,employabilite=employment_canada)
-
+canada_demo_annees_emp
 # Regression multiple 
 Regression_Emp<-lm(Nombre~Annees+demographie+employabilite,data=canada_demo_annees_emp)
 summary(Regression_Emp)
